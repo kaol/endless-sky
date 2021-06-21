@@ -25,6 +25,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Planet.h"
 #include "PlayerInfo.h"
 #include "PointerShader.h"
+#include "Politics.h"
 #include "Preferences.h"
 #include "Sale.h"
 #include "Screen.h"
@@ -60,7 +61,9 @@ namespace {
 
 ShopPanel::ShopPanel(PlayerInfo &player, bool isOutfitter)
 	: player(player), day(player.GetDate().DaysSinceEpoch()),
-	planet(player.GetPlanet()), playerShip(player.Flagship()),
+	planet(player.GetPlanet()),
+	dominated(GameData::GetPolitics().HasDominated(planet)),
+	playerShip(player.Flagship()),
 	categories(isOutfitter ? Outfit::CATEGORIES : Ship::CATEGORIES),
 	collapsed(player.Collapsed(isOutfitter ? "outfitter" : "shipyard"))
 {
@@ -867,6 +870,10 @@ bool ShopPanel::Scroll(double dx, double dy)
 
 int64_t ShopPanel::LicenseCost(const Outfit *outfit) const
 {
+	// Dominated planets sell all tech at cost to players.
+	if(dominated)
+		return 0;
+	
 	// If the player is attempting to install an outfit from cargo, storage, or that they just
 	// sold to the shop, then ignore its license requirement, if any. (Otherwise there
 	// would be no way to use or transfer license-restricted outfits between ships.)

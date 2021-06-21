@@ -118,6 +118,8 @@ protected:
 	// Remember the current day, for calculating depreciation.
 	int day;
 	const Planet *planet = nullptr;
+        // Dominated planets pass all license checks.
+        const bool dominated = false;
 	
 	// The player-owned ship that was first selected in the sidebar (or most recently purchased).
 	Ship *playerShip = nullptr;

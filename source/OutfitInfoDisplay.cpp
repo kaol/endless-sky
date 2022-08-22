@@ -26,6 +26,8 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 using namespace std;
 
 namespace {
+	set<int> UPDATE_ATTRIBUTES_SKIP;
+
 	const vector<pair<double, string>> SCALE_LABELS = {
 		make_pair(60., ""),
 		make_pair(60. * 60., ""),
@@ -35,7 +37,7 @@ namespace {
 		make_pair(1. / 60., "")
 	};
 
-	const map<string, int> SCALE = {
+	const map<string, int> SCALE_MAP = {
 		{"active cooling", 0},
 		{"afterburner shields", 0},
 		{"afterburner hull", 0},
@@ -184,14 +186,34 @@ namespace {
 		{"depleted shield delay", 5}
 	};
 
-	const map<string, string> BOOLEAN_ATTRIBUTES = {
-		{"unplunderable", "This outfit cannot be plundered."},
-		{"installable", "This is not an installable item."},
-		{"hyperdrive", "Allows you to make hyperjumps."},
-		{"jump drive", "Lets you jump to any nearby system."},
-		{"minable", "This item is mined from asteroids."},
-		{"atrocity", "This outfit is considered an atrocity."}
+	map<int, int> SCALE;
+
+	map<int, string> BOOLEAN_ATTRIBUTES;
+}
+
+
+
+void OutfitInfoDisplay::Init()
+{
+	BOOLEAN_ATTRIBUTES = {
+		{Dictionary::GetKey("unplunderable"), "This outfit cannot be plundered."},
+		{Dictionary::GetKey("installable"), "This is not an installable item."},
+		{Dictionary::GetKey("hyperdrive"), "Allows you to make hyperjumps."},
+		{Dictionary::GetKey("jump drive"), "Lets you jump to any nearby system."},
+		{Dictionary::GetKey("minable"), "This item is mined from asteroids."},
+		{Dictionary::GetKey("atrocity"), "This outfit is considered an atrocity."}
 	};
+
+	UPDATE_ATTRIBUTES_SKIP = {
+		Dictionary::GetKey("outfit space"),
+		Dictionary::GetKey("weapon capacity"),
+		Dictionary::GetKey("engine capacity"),
+		Dictionary::GetKey("gun ports"),
+		Dictionary::GetKey("turret mounts"),
+	};
+
+	for(auto it = SCALE_MAP.cbegin(); it != SCALE_MAP.cend(); ++it)
+		SCALE[Dictionary::GetKey(it->first)] = it->second;
 }
 
 
@@ -310,19 +332,18 @@ void OutfitInfoDisplay::UpdateAttributes(const Outfit &outfit)
 	attributesHeight = 20;
 
 	bool hasNormalAttributes = false;
-	for(const pair<const char *, double> &it : outfit.Attributes())
+	int i = -1;
+	for(const double &at : outfit.Attributes())
 	{
-		static const set<string> SKIP = {
-			"outfit space", "weapon capacity", "engine capacity", "gun ports", "turret mounts"
-		};
-		if(SKIP.count(it.first))
+		++i;
+		if(UPDATE_ATTRIBUTES_SKIP.count(i) || fabs(at) < 0.001)
 			continue;
 
-		auto sit = SCALE.find(it.first);
+		auto sit = SCALE.find(i);
 		double scale = (sit == SCALE.end() ? 1. : SCALE_LABELS[sit->second].first);
 		string units = (sit == SCALE.end() ? "" : SCALE_LABELS[sit->second].second);
 
-		auto bit = BOOLEAN_ATTRIBUTES.find(it.first);
+		auto bit = BOOLEAN_ATTRIBUTES.find(i);
 		if(bit != BOOLEAN_ATTRIBUTES.end())
 		{
 			attributeLabels.emplace_back(bit->second);
@@ -331,9 +352,13 @@ void OutfitInfoDisplay::UpdateAttributes(const Outfit &outfit)
 		}
 		else
 		{
-			attributeLabels.emplace_back(static_cast<string>(it.first) + ":");
-			attributeValues.emplace_back(Format::Number(it.second * scale) + units);
-			attributesHeight += 20;
+			const char *name = Dictionary::GetName(i);
+			if(name)
+			{
+				attributeLabels.emplace_back(string(name) + ":");
+				attributeValues.emplace_back(Format::Number(at * scale) + units);
+				attributesHeight += 20;
+			}
 		}
 		hasNormalAttributes = true;
 	}

@@ -372,9 +372,17 @@ bool LocationFilter::Matches(const Ship &ship) const
 	{
 		// Create a set from the positive-valued attributes of this ship.
 		set<string> shipAttributes;
+		int i = 0;
 		for(const auto &attr : ship.Attributes().Attributes())
-			if(attr.second > 0.)
-				shipAttributes.insert(shipAttributes.end(), attr.first);
+		{
+			if(attr > 0.)
+			{
+				const char * name = Dictionary::GetName(i);
+				if(name)
+					shipAttributes.insert(shipAttributes.end(), string(name));
+			}
+			++i;
+		}
 		for(const set<string> &attr : attributes)
 			if(!SetsIntersect(attr, shipAttributes))
 				return false;

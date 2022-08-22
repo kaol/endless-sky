@@ -26,12 +26,15 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 using namespace std;
 
 namespace {
+	int REQUIRED_CREW;
+	int AUTOMATON;
+
 	const double EPS = 0.0000000001;
 
 	// A mapping of attribute names to specifically-allowed minimum values. Based on the
 	// specific usage of the attribute, the allowed minimum value is chosen to avoid
 	// disallowed or undesirable behaviors (such as dividing by zero).
-	const auto MINIMUM_OVERRIDES = map<string, double>{
+	const static auto MINIMUM_OVERRIDES_MAP = map<string, double>{
 		// Attributes which are present and map to zero may have any value.
 		{"shield generation", 0,},
 		{"shield energy", 0.},
@@ -153,6 +156,16 @@ namespace {
 		{"shield heat multiplier", -1.}
 	};
 
+	map<int, double> GetMinimumOverrides()
+	{
+		map<int, double> overrides;
+		for(auto it = MINIMUM_OVERRIDES_MAP.cbegin(); it != MINIMUM_OVERRIDES_MAP.cend(); ++it)
+			overrides[Dictionary::GetKey(it->first)] = it->second;
+		return overrides;
+	}
+
+	map<int, double> MINIMUM_OVERRIDES;
+
 	void AddFlareSprites(vector<pair<Body, int>> &thisFlares, const pair<Body, int> &it, int count)
 	{
 		auto oit = find_if(thisFlares.begin(), thisFlares.end(),
@@ -180,6 +193,15 @@ namespace {
 				thisMap.erase(it.first);
 		}
 	}
+}
+
+
+
+void Outfit::Init()
+{
+	MINIMUM_OVERRIDES = GetMinimumOverrides();
+	REQUIRED_CREW = Dictionary::GetKey("required crew");
+	AUTOMATON = Dictionary::GetKey("automaton");
 }
 
 
@@ -281,7 +303,11 @@ void Outfit::Load(const DataNode &node)
 			attributes[child.Token(0)] = max(0., child.Value(1));
 		}
 		else if(child.Size() >= 2)
+		{
+			//int key = Dictionary::GetKey(child.Token(0));
+			//attributes[key] = child.Value(1);
 			attributes[child.Token(0)] = child.Value(1);
+		}
 		else
 			child.PrintTrace("Skipping unrecognized attribute:");
 	}
@@ -399,6 +425,13 @@ double Outfit::Get(const string &attribute) const
 
 
 
+double Outfit::Get(const int key) const
+{
+	return attributes.Get(key);
+}
+
+
+
 const Dictionary &Outfit::Attributes() const
 {
 	return attributes;
@@ -411,13 +444,15 @@ const Dictionary &Outfit::Attributes() const
 // not, return the maximum number that can be added.
 int Outfit::CanAdd(const Outfit &other, int count) const
 {
+	int i = -1;
 	for(const auto &at : other.attributes)
 	{
+		++i;
 		// The minimum allowed value of most attributes is 0. Some attributes
 		// have special functionality when negative, though, and are therefore
 		// allowed to have values less than 0.
 		double minimum = 0.;
-		auto it = MINIMUM_OVERRIDES.find(at.first);
+		auto it = MINIMUM_OVERRIDES.find(i);
 		if(it != MINIMUM_OVERRIDES.end())
 		{
 			minimum = it->second;
@@ -427,13 +462,13 @@ int Outfit::CanAdd(const Outfit &other, int count) const
 		}
 
 		// Only automatons may have a "required crew" of 0.
-		if(!strcmp(at.first, "required crew"))
-			minimum = !attributes.Get("automaton");
+		if(i == REQUIRED_CREW)
+			minimum = !attributes.Get(AUTOMATON);
 
-		double value = Get(at.first);
+		double value = attributes.Get(i);
 		// Allow for rounding errors:
-		if(value + at.second * count < minimum - EPS)
-			count = (value - minimum) / -at.second + EPS;
+		if(value + at * count < minimum - EPS)
+			count = (value - minimum) / -at + EPS;
 	}
 
 	return count;
@@ -447,11 +482,14 @@ void Outfit::Add(const Outfit &other, int count)
 {
 	cost += other.cost * count;
 	mass += other.mass * count;
+	vector<double>::size_type i = 0;
+	attributes.Grow();
 	for(const auto &at : other.attributes)
 	{
-		attributes[at.first] += at.second * count;
-		if(fabs(attributes[at.first]) < EPS)
-			attributes[at.first] = 0.;
+		attributes[i] += at * count;
+		if(fabs(attributes[i]) < EPS)
+			attributes[i] = 0.;
+		++i;
 	}
 
 	for(const auto &it : other.flareSprites)
@@ -479,6 +517,14 @@ void Outfit::Add(const Outfit &other, int count)
 void Outfit::Set(const char *attribute, double value)
 {
 	attributes[attribute] = value;
+}
+
+
+
+void Outfit::Set(const int key, double value)
+{
+	attributes.Grow();
+	attributes[vector<double>::size_type(key)] = value;
 }
 
 

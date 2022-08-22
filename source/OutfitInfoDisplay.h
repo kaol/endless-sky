@@ -29,6 +29,8 @@ class Outfit;
 // install it, and one shows other attributes of the outfit.
 class OutfitInfoDisplay : public ItemInfoDisplay {
 public:
+	static void Init();
+
 	OutfitInfoDisplay() = default;
 	OutfitInfoDisplay(const Outfit &outfit, const PlayerInfo &player, bool canSell = false);
 

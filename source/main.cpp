@@ -29,6 +29,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 #include "Logger.h"
 #include "MenuPanel.h"
 #include "Outfit.h"
+#include "OutfitInfoDisplay.h"
 #include "Panel.h"
 #include "PlayerInfo.h"
 #include "Preferences.h"
@@ -119,6 +120,9 @@ int main(int argc, char *argv[])
 		else if(arg == "-w" || arg == "--weapons")
 			printWeapons = true;
 	}
+	Outfit::Init();
+	OutfitInfoDisplay::Init();
+	Ship::Init();
 	Files::Init(argv);
 
 	try {

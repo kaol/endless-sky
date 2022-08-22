@@ -42,6 +42,10 @@ public:
 	static const std::vector<std::string> CATEGORIES;
 
 public:
+  //Outfit();
+
+	static void Init();
+
 	// An "outfit" can be loaded from an "outfit" node or from a ship's
 	// "attributes" node.
 	void Load(const DataNode &node);
@@ -61,6 +65,7 @@ public:
 
 	double Get(const char *attribute) const;
 	double Get(const std::string &attribute) const;
+	double Get(const int key) const;
 	const Dictionary &Attributes() const;
 
 	// Determine whether the given number of instances of the given outfit can
@@ -73,6 +78,7 @@ public:
 	// Modify this outfit's attributes. Note that this cannot be used to change
 	// special attributes, like cost and mass.
 	void Set(const char *attribute, double value);
+	void Set(const int key, double value);
 
 	// Get this outfit's engine flare sprites, if any.
 	const std::vector<std::pair<Body, int>> &FlareSprites() const;

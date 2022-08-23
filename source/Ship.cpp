@@ -1053,16 +1053,16 @@ void Ship::Save(DataWriter &out) const
 			for(const auto &it : baseAttributes.HyperOutSounds())
 				for(int i = 0; i < it.second; ++i)
 					out.Write("hyperdrive out sound", it.first->Name());
-			int i = 0;
-			for(const auto &it : baseAttributes.Attributes())
+			for(const dict &it : baseAttributes.Attributes())
 			{
-				if(it)
+				double value = baseAttributes.Get(it);
+				if(value)
 				{
-					const char *name = Dictionary::GetName(i);
-					if(name)
-						out.Write(name, it);
+					const char *name = Dictionary::GetName(it);
+					if(!name)
+						name = Dictionary::GetName(it);
+					out.Write(name, value);
 				}
-				++i;
 			}
 		}
 		out.EndChild();

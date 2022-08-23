@@ -20,14 +20,13 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 using namespace std;
 
 namespace {
-	static map<string, int> nameToKey;
+	static map<string, dict> nameToKey;
 	static vector<const char *> names;
 
 	// Perform a binary search on a sorted vector. Return the key's location (or
 	// proper insertion spot) in the first element of the pair, and "true" in
 	// the second element if the key is already in the vector.
-	/*
-	pair<size_t, bool> Search(const char *key, const vector<pair<const char *, double>> &v)
+	pair<size_t, bool> Search(const char *key, const vector<dict> &v)
 	{
 		// At each step of the search, we know the key is in [low, high).
 		size_t low = 0;
@@ -36,7 +35,7 @@ namespace {
 		while(low != high)
 		{
 			size_t mid = (low + high) / 2;
-			int cmp = strcmp(key, v[mid].first);
+			int cmp = strcmp(key, names[v[mid]]);
 			if(!cmp)
 				return make_pair(mid, true);
 
@@ -47,147 +46,100 @@ namespace {
 		}
 		return make_pair(low, false);
 	}
-	*/
 
-	static int newName(const string &name)
+	// Creates new if missing.
+	static dict NameToKey(const string &name)
 	{
-		static map<string, int> dummy;
 		static mutex m;
 
 		lock_guard<mutex> lock(m);
-		int key = names.size();
-		char *copy = strndup(name.c_str(), 255);
-		names.push_back(copy);
-		nameToKey.emplace(name, key);
-		return key;
+		map<string, dict>::iterator it = nameToKey.lower_bound(name);
+		if(it == nameToKey.end() || nameToKey.key_comp()(name, it->first))
+		{
+			it = nameToKey.insert(it, pair<string, dict>(name, names.size()));
+			names.push_back(it->first.c_str());
+		}
+		return it->second;
 	}
 }
 
 
 
-/*
 double &Dictionary::operator[](const char *name)
 {
-	// fix
-	static mutex m;
+	pair<size_t, bool> pos = Search(name, *this);
+	if(pos.second)
+		return store.data()[data()[pos.first]];
 
-	lock_guard<mutex> lock(m);
-	int index = GetKey(name);
-	if(index >= int((*this).size()))
-		(*this).resize(index+1);
-	return data()[index];
+	size_t oldSize = names.size();
+	dict key = NameToKey(name);
+	if(names.size() > oldSize)
+		Grow();
+
+	insert(begin() + pos.first, key);
+	return store[key];
 }
-*/
 
 
 
 double &Dictionary::operator[](const string &name)
 {
-	int index = GetKey(name);
-	if(index >= int((*this).size()))
-		(*this).resize(index+1);
-	return data()[index];
-	//return (*this)[key.c_str()];
+	return (*this)[name.c_str()];
 }
 
 
 
-/*
-double &Dictionary::operator[](const int &key)
+void Dictionary::Update(const char *name, const double &value)
 {
-	//return data()[key];
-	double &value = (*this)[vector<double>::size_type(key)];
-	return value;
-}
-*/
-
-
-
-/*
-double Dictionary::Get(const char *key) const
-{
-	return Get(
-	auto it = nameToKey.find(key);
-	if(it == nameToKey.cend() || int((*this).size()-1) < it->second)
-		return 0.;
-	else
-		return at(it->second);
+	pair<size_t, bool> pos = Search(name, *this);
+	if(pos.second)
+		store.data()[pos.first] = value;
 }
 
 
 
-double Dictionary::Get(const string &key) const
+void Dictionary::Update(const string &name, const double &value)
 {
-	return Get(key.c_str());
-}
-*/
-double Dictionary::Get(const char *key) const
-{
-	return Get(string(key));
+	return Update(name.c_str(), value);
 }
 
 
 
-double Dictionary::Get(const string &key) const
+
+double Dictionary::Get(const string &name) const
 {
-	auto it = nameToKey.find(key);
-	if(it == nameToKey.cend() || int((*this).size()-1) < it->second)
-		return 0.;
-	else
-		return at(it->second);
-}
-
-
-
-double Dictionary::Get(const int &key) const
-{
-	if(key < 0 || key >= int(this->size()))
-		return 0.;
-	return this->at(key);
+	pair<size_t, bool> pos = Search(name.c_str(), *this);
+	return pos.second ? store.data()[data()[pos.first]] : 0.;
 }
 
 
 
 void Dictionary::Grow()
 {
-	resize(names.size()+1);
+	if(store.size() <= names.size())
+		store.resize(names.size()+1);
 }
 
 
 
-const char *Dictionary::GetName(const int key)
+void Dictionary::UseKey(const dict &key)
 {
-	if(key < 0 || key >= int(names.size()))
-		return nullptr;
-	return names.at(key);
+	pair<size_t, bool> pos = Search(names[key], *this);
+	if(!pos.second)
+		insert(begin() + pos.first, key);
+}
+
+
+
+const char *Dictionary::GetName(const dict &key)
+{
+	return names.data()[key];
 }
 
 
 
 // Inserts the name if not found.
-const int Dictionary::GetKey(const string &name)
+const dict Dictionary::GetKey(const string &name)
 {
-	map<string, int>::iterator it = nameToKey.find(name);
-	if(it == nameToKey.end())
-		return newName(name.c_str());
-	else
-		return it->second;
-}
-
-
-
-const int Dictionary::GetKey(const char *name)
-{
-	return GetKey(string(name));
-}
-
-
-
-const int Dictionary::LookupKey(const string &name)
-{
-	map<string, int>::const_iterator it = nameToKey.find(name);
-	if(it == nameToKey.end())
-		return -1;
-	else
-		return it->second;
+	return NameToKey(name);
 }

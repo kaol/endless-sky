@@ -26,7 +26,7 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 using namespace std;
 
 namespace {
-	set<int> UPDATE_ATTRIBUTES_SKIP;
+	set<dict> UPDATE_ATTRIBUTES_SKIP;
 
 	const vector<pair<double, string>> SCALE_LABELS = {
 		make_pair(60., ""),
@@ -186,9 +186,9 @@ namespace {
 		{"depleted shield delay", 5}
 	};
 
-	map<int, int> SCALE;
+	map<dict, int> SCALE;
 
-	map<int, string> BOOLEAN_ATTRIBUTES;
+	map<dict, string> BOOLEAN_ATTRIBUTES;
 }
 
 
@@ -332,18 +332,16 @@ void OutfitInfoDisplay::UpdateAttributes(const Outfit &outfit)
 	attributesHeight = 20;
 
 	bool hasNormalAttributes = false;
-	int i = -1;
-	for(const double &at : outfit.Attributes())
+	for(const dict &at : outfit.Attributes())
 	{
-		++i;
-		if(UPDATE_ATTRIBUTES_SKIP.count(i) || fabs(at) < 0.001)
+		if(UPDATE_ATTRIBUTES_SKIP.count(at))
 			continue;
 
-		auto sit = SCALE.find(i);
+		auto sit = SCALE.find(at);
 		double scale = (sit == SCALE.end() ? 1. : SCALE_LABELS[sit->second].first);
 		string units = (sit == SCALE.end() ? "" : SCALE_LABELS[sit->second].second);
 
-		auto bit = BOOLEAN_ATTRIBUTES.find(i);
+		auto bit = BOOLEAN_ATTRIBUTES.find(at);
 		if(bit != BOOLEAN_ATTRIBUTES.end())
 		{
 			attributeLabels.emplace_back(bit->second);
@@ -352,11 +350,12 @@ void OutfitInfoDisplay::UpdateAttributes(const Outfit &outfit)
 		}
 		else
 		{
-			const char *name = Dictionary::GetName(i);
+			const char *name = Dictionary::GetName(at);
+			double value = outfit.Attributes().Get(at);
 			if(name)
 			{
 				attributeLabels.emplace_back(string(name) + ":");
-				attributeValues.emplace_back(Format::Number(at * scale) + units);
+				attributeValues.emplace_back(Format::Number(value * scale) + units);
 				attributesHeight += 20;
 			}
 		}

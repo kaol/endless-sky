@@ -28,6 +28,8 @@ typedef std::vector<double>::size_type dict;
 // offers direct access to the attribute values stored in a vector.
 class Dictionary : private std::vector<dict> {
 public:
+	Dictionary();
+
 	// Access a key for modifying it:
 	double &operator[](const char *name);
 	double &operator[](const std::string &name);

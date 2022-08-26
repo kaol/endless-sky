@@ -65,6 +65,13 @@ namespace {
 
 
 
+// Workaround, the version in PR should have fix to this
+Dictionary::Dictionary()
+	: store(200)
+{
+}
+
+
 double &Dictionary::operator[](const char *name)
 {
 	pair<size_t, bool> pos = Search(name, *this);
